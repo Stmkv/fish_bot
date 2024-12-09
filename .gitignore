@@ -2,3 +2,4 @@ __pycache__
 .venv
 fish_bot
 helper.json
+.env
