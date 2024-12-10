@@ -1,3 +1,4 @@
+import re
 from ast import keyword
 from functools import partial
 
@@ -13,7 +14,13 @@ from telegram.ext import (
     Updater,
 )
 
-from strapi import get_image, get_picture_url, get_products
+from strapi import (
+    add_to_cart_item,
+    create_cart,
+    get_image,
+    get_picture_url,
+    get_products,
+)
 
 _database = None
 
@@ -37,12 +44,17 @@ def start(update, context, api_token_salt):
 
 def handle_menu(update: Update, context: CallbackContext, api_token_salt) -> None:
     query = update.callback_query
+    context.user_data["product_id"] = str(query.data)
+
     context.bot.delete_message(
         chat_id=query.message.chat_id,
         message_id=query.message.message_id,
     )
 
-    keyboard = [[InlineKeyboardButton("Назад", callback_data="back")]]
+    keyboard = [
+        [InlineKeyboardButton("Назад", callback_data="back")],
+        [InlineKeyboardButton("Добавить в корзину", callback_data="in_cart")],
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     products = get_products(api_token_salt)
@@ -71,6 +83,12 @@ def handle_description(update: Update, context: CallbackContext, api_token_salt)
     query = update.callback_query
     query.answer()
     if query.data == "back":
+        start(update, context, api_token_salt)
+        return "HANDLE_MENU"
+    if query.data == "in_cart":
+        product_id = context.user_data["product_id"]
+        add_to_cart_item(api_token_salt, str(query.message.chat_id), product_id)
+        context.user_data[product_id] = ""
         start(update, context, api_token_salt)
         return "HANDLE_MENU"
 

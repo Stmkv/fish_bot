@@ -18,6 +18,7 @@ def get_products(api_token_salt):
 
     for product in response_products:
         product_list.append(product)
+    print(product_list)
     return product_list
 
 
@@ -44,8 +45,55 @@ def get_image(api_token_salt, picture_url):
     return image_bytes
 
 
-# print(get_picture_url(api_token_salt, 4))
+def create_cart(api_token_salt, tg_id):
+    url = "http://localhost:1337/api/carts"
+    headers = {
+        "Authorization": f"bearer {api_token_salt}",
+        "Content-Type": "application/json",
+    }
+    data = {
+        "data": {
+            "tg_id": tg_id,
+        }
+    }
+    response = requests.post(url, json=data, headers=headers)
+    response.raise_for_status()
+    return response.json()["data"]["id"]
+
+
+def get_cart_id(api_token_salt, tg_id):
+    url = f"http://localhost:1337/api/carts?filters[tg_id][$eq]={tg_id}"
+    headers = {"Authorization": f"bearer {api_token_salt}"}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+
+    data = response.json()
+    if data["data"]:
+        return data["data"][0]["id"]
+    return None
+
+
+def add_to_cart_item(api_token_salt, tg_id, product_id, quantity=1):
+    cart_id = get_cart_id(api_token_salt, tg_id)
+
+    if not cart_id:
+        cart_id = create_cart(api_token_salt, tg_id)
+
+    url = "http://localhost:1337/api/cart-items"
+    headers = {
+        "Authorization": f"bearer {api_token_salt}",
+        "Content-Type": "application/json",
+    }
+    print(product_id)
+    data = {
+        "data": {
+            "Product": {"connect": [{"id": product_id}]},
+            "quantity": quantity,
+        }
+    }
+    response = requests.post(url, json=data, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
 get_products(api_token_salt)
-
-
-# "http://localhost:1337/api/products?filters[id][$eq]=6&fields=title&populate[picture][fields]=url"
