@@ -130,5 +130,12 @@ def get_products_cart(api_token_salt, tg_id):
     return user_cart
 
 
-def delete_product_items()
-# get_products_cart(api_token_salt, 849101781)
+def delete_product_items(api_token_salt, tg_id, user_cart):
+    headers = {"Authorization": f"bearer {api_token_salt}"}
+
+    for item in user_cart:
+        cart_item_id = item["documentId"]
+        delete_url = f"http://localhost:1337/api/cart-items/{cart_item_id}"
+        delete_response = requests.delete(delete_url, headers=headers)
+        delete_response.raise_for_status()
+    return True

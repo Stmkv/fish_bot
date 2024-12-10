@@ -1,5 +1,3 @@
-import re
-from ast import keyword
 from functools import partial
 
 import redis
@@ -17,7 +15,7 @@ from telegram.ext import (
 from strapi import (
     add_to_cart_item,
     connect_cart_to_cart_item,
-    create_cart,
+    delete_product_items,
     get_cart_id,
     get_image,
     get_picture_url,
@@ -39,6 +37,11 @@ def start(update, context, api_token_salt):
     if update.message:
         update.message.reply_text(text="Выберете товар 👋", reply_markup=reply_markup)
     elif update.callback_query:
+        query = update.callback_query
+        context.bot.delete_message(
+            chat_id=query.message.chat_id,
+            message_id=query.message.message_id,
+        )
         query = update.callback_query
         query.message.reply_text(text="Список товаров", reply_markup=reply_markup)
 
@@ -82,11 +85,6 @@ def handle_menu(update: Update, context: CallbackContext, api_token_salt) -> Non
 
 def handle_description(update: Update, context: CallbackContext, api_token_salt):
     query = update.callback_query
-    context.bot.delete_message(
-        chat_id=query.message.chat_id,
-        message_id=query.message.message_id,
-    )
-    query = update.callback_query
     query.answer()
     if query.data == "back":
         start(update, context, api_token_salt)
@@ -107,22 +105,57 @@ def handle_description(update: Update, context: CallbackContext, api_token_salt)
         )
         start(update, context, api_token_salt)
         return "HANDLE_MENU"
+
     if query.data == "chek_cart":
-        usert_cart = get_products_cart(api_token_salt, str(query.message.chat_id))
-        text = ""
-        total_sum = 0
-        for product in usert_cart:
+        context.bot.delete_message(
+            chat_id=query.message.chat_id,
+            message_id=query.message.message_id,
+        )
+        check_cart(update, context, api_token_salt)
+        return "CART_MENU"
+
+
+def cart_menu(update: Update, context: CallbackContext, api_token_salt):
+    query = update.callback_query
+    query.answer()
+    tg_id = query.message.chat_id
+    user_cart = get_products_cart(api_token_salt, str(query.message.chat_id))
+    if query.data == "clear_cart":
+        delete_product_items(api_token_salt, tg_id, user_cart)
+        start(update, context, api_token_salt)
+        return "HANDLE_MENU"
+    if query.data == "in_menu":
+        start(update, context, api_token_salt)
+        return "HANDLE_MENU"
+    if query.data == "pay":
+        ...
+
+
+def check_cart(update: Update, context: CallbackContext, api_token_salt):
+    keyboard = [
+        [
+            InlineKeyboardButton("Отказаться от товара", callback_data="clear_cart"),
+            InlineKeyboardButton("В главное меню", callback_data="in_menu"),
+        ],
+        [InlineKeyboardButton("Оплатить", callback_data="pay")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    user_cart = get_products_cart(api_token_salt, str(update.effective_user.id))
+    text = ""
+    total_sum = 0
+    for product in user_cart:
+        if product["Product"]:
             text += f"""{product["Product"][0]["title"]} - {product["quantity"]} кг
             {product["Product"][0]["price"]} за кг\n\n"""
             total_sum += product["Product"][0]["price"] * product["quantity"]
-        text += f"\n\nОбщая сумма: {total_sum} руб"
+    text += f"\n\nОбщая сумма: {total_sum} руб"
 
-        context.bot.send_message(
-            chat_id=query.message.chat_id,
-            text=text,
-        )
-        start(update, context, api_token_salt)
-        return "HANDLE_MENU"
+    context.bot.send_message(
+        chat_id=update.effective_user.id,
+        text=text,
+        reply_markup=reply_markup,
+    )
 
 
 def handle_users_reply(update, context, api_token_salt):
@@ -145,6 +178,7 @@ def handle_users_reply(update, context, api_token_salt):
         "HANDLE_DESCRIPTION": partial(
             handle_description, api_token_salt=api_token_salt
         ),
+        "CART_MENU": partial(cart_menu, api_token_salt=api_token_salt),
     }
     state_handler = states_functions[user_state]
     try:
