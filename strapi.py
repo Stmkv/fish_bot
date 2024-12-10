@@ -139,3 +139,38 @@ def delete_product_items(api_token_salt, tg_id, user_cart):
         delete_response = requests.delete(delete_url, headers=headers)
         delete_response.raise_for_status()
     return True
+
+
+def create_client(api_token_salt, tg_id, email):
+    url = "http://localhost:1337/api/clients"
+    headers = {
+        "Authorization": f"bearer {api_token_salt}",
+        "Content-Type": "application/json",
+    }
+    data = {
+        "data": {
+            "email": email,
+            "tg_id": tg_id,
+        }
+    }
+    response = requests.post(url, json=data, headers=headers)
+    response.raise_for_status()
+    client_id = response.json()["data"]["documentId"]
+    return client_id
+
+
+def connect_client_to_cart(api_token_salt, client_id, cart_id):
+    url = f"http://localhost:1337/api/clients/{client_id}"
+    headers = {
+        "Authorization": f"bearer {api_token_salt}",
+    }
+    data = {
+        "data": {
+            "carts": {
+                "connect": [cart_id],
+            },
+        }
+    }
+    response = requests.put(url, headers=headers, json=data)
+    response.raise_for_status()
+    return response.json()

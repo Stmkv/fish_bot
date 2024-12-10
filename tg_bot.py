@@ -15,6 +15,8 @@ from telegram.ext import (
 from strapi import (
     add_to_cart_item,
     connect_cart_to_cart_item,
+    connect_client_to_cart,
+    create_client,
     delete_product_items,
     get_cart_id,
     get_image,
@@ -128,7 +130,28 @@ def cart_menu(update: Update, context: CallbackContext, api_token_salt):
         start(update, context, api_token_salt)
         return "HANDLE_MENU"
     if query.data == "pay":
-        ...
+        context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text="Пожалуйства введите ваш email для связи",
+        )
+        return "WAITING_EMAIL"
+
+
+def waiting_email(update: Update, context: CallbackContext, api_token_salt):
+    chat_id = update.effective_user.id
+    email = update.message.text
+    context.bot.send_message(
+        chat_id=update.effective_user.id,
+        text="Спасибо, менеджер скоро с вами свяжется ",
+    )
+    tg_id = str(update.effective_user.id)
+
+    client_id = create_client(api_token_salt, tg_id, email)
+    cart_id = get_cart_id(api_token_salt, chat_id)
+    connect_client_to_cart(api_token_salt, client_id, cart_id)
+
+    start(update, context, api_token_salt)
+    return "HANDLE_MENU"
 
 
 def check_cart(update: Update, context: CallbackContext, api_token_salt):
@@ -179,6 +202,7 @@ def handle_users_reply(update, context, api_token_salt):
             handle_description, api_token_salt=api_token_salt
         ),
         "CART_MENU": partial(cart_menu, api_token_salt=api_token_salt),
+        "WAITING_EMAIL": partial(waiting_email, api_token_salt=api_token_salt),
     }
     state_handler = states_functions[user_state]
     try:
