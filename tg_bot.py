@@ -1,6 +1,8 @@
 from functools import partial
+from http.client import BAD_REQUEST
 
 import redis
+from email_validator import EmailNotValidError, validate_email
 from environs import Env
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
@@ -140,16 +142,22 @@ def cart_menu(update: Update, context: CallbackContext, api_token_salt):
 def waiting_email(update: Update, context: CallbackContext, api_token_salt):
     chat_id = update.effective_user.id
     email = update.message.text
+    try:
+        validate_email(email)
+    except EmailNotValidError:
+        context.bot.send_message(
+            chat_id=chat_id,
+            text="Некорректный email, попробуйте еще раз",
+        )
+        return "WAITING_EMAIL"
+    tg_id = str(update.effective_user.id)
+    client_id = create_client(api_token_salt, tg_id, email)
+    cart_id = get_cart_id(api_token_salt, chat_id)
+    connect_client_to_cart(api_token_salt, client_id, cart_id)
     context.bot.send_message(
         chat_id=update.effective_user.id,
         text="Спасибо, менеджер скоро с вами свяжется ",
     )
-    tg_id = str(update.effective_user.id)
-
-    client_id = create_client(api_token_salt, tg_id, email)
-    cart_id = get_cart_id(api_token_salt, chat_id)
-    connect_client_to_cart(api_token_salt, client_id, cart_id)
-
     start(update, context, api_token_salt)
     return "HANDLE_MENU"
 
