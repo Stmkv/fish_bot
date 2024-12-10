@@ -89,10 +89,12 @@ def handle_description(update: Update, context: CallbackContext, api_token_salt)
         return "HANDLE_MENU"
     if query.data == "in_cart":
         product_id = context.user_data["product_id"]
+
         cart_item_id = add_to_cart_item(
             api_token_salt, str(query.message.chat_id), product_id
         )
         cart_id = get_cart_id(api_token_salt, str(query.message.chat_id))
+
         connect_cart_to_cart_item(api_token_salt, cart_id, cart_item_id)
         context.user_data[product_id] = ""
         start(update, context, api_token_salt)

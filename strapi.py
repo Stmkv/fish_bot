@@ -109,6 +109,3 @@ def connect_cart_to_cart_item(api_token_salt, cart_id, cart_item_id):
     response = requests.put(url, headers=headers, json=data)
     response.raise_for_status()
     return response.json()
-
-
-# print(get_cart_id(api_token_salt, 849101781))
