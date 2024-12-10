@@ -16,7 +16,9 @@ from telegram.ext import (
 
 from strapi import (
     add_to_cart_item,
+    connect_cart_to_cart_item,
     create_cart,
+    get_cart_id,
     get_image,
     get_picture_url,
     get_products,
@@ -28,7 +30,7 @@ _database = None
 def start(update, context, api_token_salt):
     products = get_products(api_token_salt)
     keyboard = [
-        [InlineKeyboardButton(product["title"], callback_data=product["id"])]
+        [InlineKeyboardButton(product["title"], callback_data=product["documentId"])]
         for product in products
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -61,7 +63,7 @@ def handle_menu(update: Update, context: CallbackContext, api_token_salt) -> Non
     picture_url = get_picture_url(api_token_salt, str(query.data))
     image_bytes = get_image(api_token_salt, picture_url)
     for product in products:
-        if str(product["id"]) == str(query.data):
+        if str(product["documentId"]) == str(query.data):
             text = f"{product["title"]} - {product["price"]} руб/кг\n\n{product["description"]}"
             query.answer()
             context.bot.send_photo(
@@ -87,7 +89,11 @@ def handle_description(update: Update, context: CallbackContext, api_token_salt)
         return "HANDLE_MENU"
     if query.data == "in_cart":
         product_id = context.user_data["product_id"]
-        add_to_cart_item(api_token_salt, str(query.message.chat_id), product_id)
+        cart_item_id = add_to_cart_item(
+            api_token_salt, str(query.message.chat_id), product_id
+        )
+        cart_id = get_cart_id(api_token_salt, str(query.message.chat_id))
+        connect_cart_to_cart_item(api_token_salt, cart_id, cart_item_id)
         context.user_data[product_id] = ""
         start(update, context, api_token_salt)
         return "HANDLE_MENU"

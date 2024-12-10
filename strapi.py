@@ -18,14 +18,13 @@ def get_products(api_token_salt):
 
     for product in response_products:
         product_list.append(product)
-    print(product_list)
     return product_list
 
 
 def get_picture_url(api_token_salt, id_product):
     url = "http://localhost:1337/api/products"
     params = {
-        "filters[id][$eq]": id_product,
+        "filters[documentId][$eq]": id_product,
         "fields": "title",
         "populate[picture][fields]": "url",
     }
@@ -58,7 +57,7 @@ def create_cart(api_token_salt, tg_id):
     }
     response = requests.post(url, json=data, headers=headers)
     response.raise_for_status()
-    return response.json()["data"]["id"]
+    return response.json()["data"]["documentId"]
 
 
 def get_cart_id(api_token_salt, tg_id):
@@ -69,7 +68,7 @@ def get_cart_id(api_token_salt, tg_id):
 
     data = response.json()
     if data["data"]:
-        return data["data"][0]["id"]
+        return data["data"][0]["documentId"]
     return None
 
 
@@ -84,16 +83,32 @@ def add_to_cart_item(api_token_salt, tg_id, product_id, quantity=1):
         "Authorization": f"bearer {api_token_salt}",
         "Content-Type": "application/json",
     }
-    print(product_id)
     data = {
         "data": {
-            "Product": {"connect": [{"id": product_id}]},
+            "Product": {"connect": [{"documentId": product_id}]},
             "quantity": quantity,
         }
     }
     response = requests.post(url, json=data, headers=headers)
     response.raise_for_status()
+    return response.json()["data"]["documentId"]
+
+
+def connect_cart_to_cart_item(api_token_salt, cart_id, cart_item_id):
+    url = f"http://localhost:1337/api/carts/{cart_id}"
+    headers = {
+        "Authorization": f"bearer {api_token_salt}",
+    }
+    data = {
+        "data": {
+            "cart_items": {
+                "connect": [cart_item_id],
+            },
+        }
+    }
+    response = requests.put(url, headers=headers, json=data)
+    response.raise_for_status()
     return response.json()
 
 
-get_products(api_token_salt)
+# print(get_cart_id(api_token_salt, 849101781))
