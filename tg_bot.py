@@ -22,6 +22,7 @@ from strapi import (
     get_image,
     get_picture_url,
     get_products,
+    get_products_cart,
 )
 
 _database = None
@@ -54,7 +55,10 @@ def handle_menu(update: Update, context: CallbackContext, api_token_salt) -> Non
     )
 
     keyboard = [
-        [InlineKeyboardButton("Назад", callback_data="back")],
+        [
+            InlineKeyboardButton("Назад", callback_data="back"),
+            InlineKeyboardButton("Моя корзина", callback_data="chek_cart"),
+        ],
         [InlineKeyboardButton("Добавить в корзину", callback_data="in_cart")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -97,6 +101,26 @@ def handle_description(update: Update, context: CallbackContext, api_token_salt)
 
         connect_cart_to_cart_item(api_token_salt, cart_id, cart_item_id)
         context.user_data[product_id] = ""
+        context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text="Товар добавлен в корзину",
+        )
+        start(update, context, api_token_salt)
+        return "HANDLE_MENU"
+    if query.data == "chek_cart":
+        usert_cart = get_products_cart(api_token_salt, str(query.message.chat_id))
+        text = ""
+        total_sum = 0
+        for product in usert_cart:
+            text += f"""{product["Product"][0]["title"]} - {product["quantity"]} кг
+            {product["Product"][0]["price"]} за кг\n\n"""
+            total_sum += product["Product"][0]["price"] * product["quantity"]
+        text += f"\n\nОбщая сумма: {total_sum} руб"
+
+        context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=text,
+        )
         start(update, context, api_token_salt)
         return "HANDLE_MENU"
 

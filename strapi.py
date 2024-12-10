@@ -109,3 +109,26 @@ def connect_cart_to_cart_item(api_token_salt, cart_id, cart_item_id):
     response = requests.put(url, headers=headers, json=data)
     response.raise_for_status()
     return response.json()
+
+
+def get_products_cart(api_token_salt, tg_id):
+    url = "http://localhost:1337/api/carts"
+    params = {
+        "filters[tg_id][$eq]": tg_id,
+        "populate[cart_items][populate]": "Product",
+    }
+    headers = {"Authorization": f"bearer {api_token_salt}"}
+    response = requests.get(url, headers=headers, params=params)
+    response.raise_for_status()
+
+    cart_products = response.json()
+    cart_products = cart_products["data"][0]["cart_items"]
+    user_cart = []
+    for product in cart_products:
+        user_cart.append(product)
+
+    return user_cart
+
+
+def delete_product_items()
+# get_products_cart(api_token_salt, 849101781)
