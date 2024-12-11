@@ -4,8 +4,8 @@
 
 Необходимо создать `.env`
 
-```
-API_TOKEN_SALT=<Token Strapi>
+```.env
+API_TOKEN_STRAPI=<Token Strapi>
 TG_BOT_TOKEN=<Token бота телеграм>
 REDIS_ADDRESS=<Адрес Redis>
 REDIS_PORT=<Порт Redis>
@@ -21,15 +21,15 @@ REDIS_PASSWORD=<пароль Redis>
 
 Для создания проекта выполните команды:
 
-```
+```cmd
 npx create-strapi-app@latest
 ```
 
-```
+```cmd
 npm run build
 ```
 
-```
+```cmd
 npm run develop
 ```
 
@@ -47,6 +47,6 @@ npm run develop
 
 Перейти в корневую папку проекта и выполнить:
 
-```
+```cmd
 python3 pip install -r requirements.txt
 ```

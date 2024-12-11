@@ -1,5 +1,4 @@
 from functools import partial
-from http.client import BAD_REQUEST
 
 import redis
 from email_validator import EmailNotValidError, validate_email
@@ -27,11 +26,9 @@ from strapi import (
     get_products_cart,
 )
 
-_database = None
 
-
-def start(update, context, api_token_salt):
-    products = get_products(api_token_salt)
+def start(update, context, api_token_strapi):
+    products = get_products(api_token_strapi)
     keyboard = [
         [InlineKeyboardButton(product["title"], callback_data=product["documentId"])]
         for product in products
@@ -52,7 +49,7 @@ def start(update, context, api_token_salt):
     return "HANDLE_MENU"
 
 
-def handle_menu(update: Update, context: CallbackContext, api_token_salt) -> None:
+def handle_menu(update: Update, context: CallbackContext, api_token_strapi) -> None:
     query = update.callback_query
     context.user_data["product_id"] = str(query.data)
 
@@ -70,9 +67,9 @@ def handle_menu(update: Update, context: CallbackContext, api_token_salt) -> Non
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    products = get_products(api_token_salt)
-    picture_url = get_picture_url(api_token_salt, str(query.data))
-    image_bytes = get_image(api_token_salt, picture_url)
+    products = get_products(api_token_strapi)
+    picture_url = get_picture_url(api_token_strapi, str(query.data))
+    image_bytes = get_image(api_token_strapi, picture_url)
     for product in products:
         if str(product["documentId"]) == str(query.data):
             text = f"{product["title"]} - {product["price"]} руб/кг\n\n{product["description"]}"
@@ -87,27 +84,27 @@ def handle_menu(update: Update, context: CallbackContext, api_token_salt) -> Non
     return "HANDLE_DESCRIPTION"
 
 
-def handle_description(update: Update, context: CallbackContext, api_token_salt):
+def handle_description(update: Update, context: CallbackContext, api_token_strapi):
     query = update.callback_query
     query.answer()
     if query.data == "back":
-        start(update, context, api_token_salt)
+        start(update, context, api_token_strapi)
         return "HANDLE_MENU"
     if query.data == "in_cart":
         product_id = context.user_data["product_id"]
 
         cart_item_id = add_to_cart_item(
-            api_token_salt, str(query.message.chat_id), product_id
+            api_token_strapi, str(query.message.chat_id), product_id
         )
-        cart_id = get_cart_id(api_token_salt, str(query.message.chat_id))
+        cart_id = get_cart_id(api_token_strapi, str(query.message.chat_id))
 
-        connect_cart_to_cart_item(api_token_salt, cart_id, cart_item_id)
+        connect_cart_to_cart_item(api_token_strapi, cart_id, cart_item_id)
         context.user_data[product_id] = ""
         context.bot.send_message(
             chat_id=query.message.chat_id,
             text="Товар добавлен в корзину",
         )
-        start(update, context, api_token_salt)
+        start(update, context, api_token_strapi)
         return "HANDLE_MENU"
 
     if query.data == "chek_cart":
@@ -115,21 +112,21 @@ def handle_description(update: Update, context: CallbackContext, api_token_salt)
             chat_id=query.message.chat_id,
             message_id=query.message.message_id,
         )
-        check_cart(update, context, api_token_salt)
+        check_cart(update, context, api_token_strapi)
         return "GET_CART_MENU"
 
 
-def get_cart_menu(update: Update, context: CallbackContext, api_token_salt):
+def get_cart_menu(update: Update, context: CallbackContext, api_token_strapi):
     query = update.callback_query
     query.answer()
     tg_id = query.message.chat_id
-    user_cart = get_products_cart(api_token_salt, str(query.message.chat_id))
+    user_cart = get_products_cart(api_token_strapi, str(query.message.chat_id))
     if query.data == "clear_cart":
-        delete_product_items(api_token_salt, tg_id, user_cart)
-        start(update, context, api_token_salt)
+        delete_product_items(api_token_strapi, tg_id, user_cart)
+        start(update, context, api_token_strapi)
         return "HANDLE_MENU"
     if query.data == "in_menu":
-        start(update, context, api_token_salt)
+        start(update, context, api_token_strapi)
         return "HANDLE_MENU"
     if query.data == "pay":
         context.bot.send_message(
@@ -139,7 +136,7 @@ def get_cart_menu(update: Update, context: CallbackContext, api_token_salt):
         return "WAIT_EMAIL"
 
 
-def wait_email(update: Update, context: CallbackContext, api_token_salt):
+def wait_email(update: Update, context: CallbackContext, api_token_strapi):
     chat_id = update.effective_user.id
     email = update.message.text
     try:
@@ -151,18 +148,18 @@ def wait_email(update: Update, context: CallbackContext, api_token_salt):
         )
         return "WAIT_EMAIL"
     tg_id = str(update.effective_user.id)
-    client_id = create_client(api_token_salt, tg_id, email)
-    cart_id = get_cart_id(api_token_salt, chat_id)
-    connect_client_to_cart(api_token_salt, client_id, cart_id)
+    client_id = create_client(api_token_strapi, tg_id, email)
+    cart_id = get_cart_id(api_token_strapi, chat_id)
+    connect_client_to_cart(api_token_strapi, client_id, cart_id)
     context.bot.send_message(
         chat_id=update.effective_user.id,
         text="Спасибо, менеджер скоро с вами свяжется ",
     )
-    start(update, context, api_token_salt)
+    start(update, context, api_token_strapi)
     return "HANDLE_MENU"
 
 
-def check_cart(update: Update, context: CallbackContext, api_token_salt):
+def check_cart(update: Update, context: CallbackContext, api_token_strapi):
     keyboard = [
         [
             InlineKeyboardButton("Отказаться от товара", callback_data="clear_cart"),
@@ -172,7 +169,7 @@ def check_cart(update: Update, context: CallbackContext, api_token_salt):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    user_cart = get_products_cart(api_token_salt, str(update.effective_user.id))
+    user_cart = get_products_cart(api_token_strapi, str(update.effective_user.id))
     text = ""
     total_sum = 0
     for product in user_cart:
@@ -189,8 +186,7 @@ def check_cart(update: Update, context: CallbackContext, api_token_salt):
     )
 
 
-def handle_users_reply(update, context, api_token_salt):
-    db = get_database_connection()
+def handle_users_reply(update, context, api_token_strapi, db):
     if update.message:
         user_reply = update.message.text
         chat_id = update.message.chat_id
@@ -204,13 +200,13 @@ def handle_users_reply(update, context, api_token_salt):
     else:
         user_state = db.get(chat_id).decode("utf-8")
     states_functions = {
-        "START": partial(start, api_token_salt=api_token_salt),
-        "HANDLE_MENU": partial(handle_menu, api_token_salt=api_token_salt),
+        "START": partial(start, api_token_strapi=api_token_strapi),
+        "HANDLE_MENU": partial(handle_menu, api_token_strapi=api_token_strapi),
         "HANDLE_DESCRIPTION": partial(
-            handle_description, api_token_salt=api_token_salt
+            handle_description, api_token_strapi=api_token_strapi
         ),
-        "GET_CART_MENU": partial(get_cart_menu, api_token_salt=api_token_salt),
-        "WAIT_EMAIL": partial(wait_email, api_token_salt=api_token_salt),
+        "GET_CART_MENU": partial(get_cart_menu, api_token_strapi=api_token_strapi),
+        "WAIT_EMAIL": partial(wait_email, api_token_strapi=api_token_strapi),
     }
     state_handler = states_functions[user_state]
     try:
@@ -222,41 +218,38 @@ def handle_users_reply(update, context, api_token_salt):
         print(err)
 
 
-def get_database_connection():
-    global _database
-    if _database is None:
-        database_password = env.str("REDIS_PASSWORD")
-        database_host = env.str("REDIS_ADDRESS")
-        database_port = env.str("REDIS_PORT")
-        _database = redis.Redis(
-            host=database_host,
-            port=database_port,
-            password=database_password,
-        )
-    return _database
-
-
 if __name__ == "__main__":
     env = Env()
     env.read_env()
     tg_bot_token = env.str("TG_BOT_TOKEN")
-    api_token_salt = env.str("API_TOKEN_SALT")
+    api_token_strapi = env.str("API_TOKEN_STRAPI")
+
+    database_password = env.str("REDIS_PASSWORD")
+    database_host = env.str("REDIS_ADDRESS")
+    database_port = env.str("REDIS_PORT")
+    database = redis.Redis(
+        host=database_host,
+        port=database_port,
+        password=database_password,
+    )
 
     updater = Updater(tg_bot_token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(
         CommandHandler(
-            "start", partial(handle_users_reply, api_token_salt=api_token_salt)
+            "start",
+            partial(handle_users_reply, api_token_strapi=api_token_strapi, db=database),
         )
     )
     dispatcher.add_handler(
         CallbackQueryHandler(
-            partial(handle_users_reply, api_token_salt=api_token_salt),
+            partial(handle_users_reply, api_token_strapi=api_token_strapi, db=database),
         )
     )
     dispatcher.add_handler(
         MessageHandler(
-            Filters.text, partial(handle_users_reply, api_token_salt=api_token_salt)
+            Filters.text,
+            partial(handle_users_reply, api_token_strapi=api_token_strapi, db=database),
         )
     )
     updater.start_polling()
