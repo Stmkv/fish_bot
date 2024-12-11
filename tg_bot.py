@@ -116,10 +116,10 @@ def handle_description(update: Update, context: CallbackContext, api_token_salt)
             message_id=query.message.message_id,
         )
         check_cart(update, context, api_token_salt)
-        return "CART_MENU"
+        return "GET_CART_MENU"
 
 
-def cart_menu(update: Update, context: CallbackContext, api_token_salt):
+def get_cart_menu(update: Update, context: CallbackContext, api_token_salt):
     query = update.callback_query
     query.answer()
     tg_id = query.message.chat_id
@@ -136,10 +136,10 @@ def cart_menu(update: Update, context: CallbackContext, api_token_salt):
             chat_id=query.message.chat_id,
             text="Пожалуйства введите ваш email для связи",
         )
-        return "WAITING_EMAIL"
+        return "WAIT_EMAIL"
 
 
-def waiting_email(update: Update, context: CallbackContext, api_token_salt):
+def wait_email(update: Update, context: CallbackContext, api_token_salt):
     chat_id = update.effective_user.id
     email = update.message.text
     try:
@@ -149,7 +149,7 @@ def waiting_email(update: Update, context: CallbackContext, api_token_salt):
             chat_id=chat_id,
             text="Некорректный email, попробуйте еще раз",
         )
-        return "WAITING_EMAIL"
+        return "WAIT_EMAIL"
     tg_id = str(update.effective_user.id)
     client_id = create_client(api_token_salt, tg_id, email)
     cart_id = get_cart_id(api_token_salt, chat_id)
@@ -209,8 +209,8 @@ def handle_users_reply(update, context, api_token_salt):
         "HANDLE_DESCRIPTION": partial(
             handle_description, api_token_salt=api_token_salt
         ),
-        "CART_MENU": partial(cart_menu, api_token_salt=api_token_salt),
-        "WAITING_EMAIL": partial(waiting_email, api_token_salt=api_token_salt),
+        "GET_CART_MENU": partial(get_cart_menu, api_token_salt=api_token_salt),
+        "WAIT_EMAIL": partial(wait_email, api_token_salt=api_token_salt),
     }
     state_handler = states_functions[user_state]
     try:
