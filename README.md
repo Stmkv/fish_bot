@@ -1,11 +1,13 @@
 # Бот для продажи рыбы
 
+Бот предстовляет собой интернет магазин по продаже рыбы.
+
 ## Как запустить
 
 Необходимо создать `.env`
 
 ```.env
-API_TOKEN_STRAPI=<Token Strapi>
+TOKEN_STRAPI_API=<Token Strapi>
 TG_BOT_TOKEN=<Token бота телеграм>
 REDIS_ADDRESS=<Адрес Redis>
 REDIS_PORT=<Порт Redis>
