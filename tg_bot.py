@@ -27,8 +27,8 @@ from strapi import (
 )
 
 
-def start(update, context, token_strapi_api):
-    products = get_products(token_strapi_api, url_starpi)
+def start(update, context, strapi_api_token):
+    products = get_products(strapi_api_token, url_starpi)
     keyboard = [
         [InlineKeyboardButton(product["title"], callback_data=product["documentId"])]
         for product in products
@@ -49,7 +49,7 @@ def start(update, context, token_strapi_api):
     return "HANDLE_MENU"
 
 
-def handle_menu(update: Update, context: CallbackContext, token_strapi_api) -> None:
+def handle_menu(update: Update, context: CallbackContext, strapi_api_token) -> None:
     query = update.callback_query
     context.user_data["product_id"] = str(query.data)
 
@@ -67,9 +67,9 @@ def handle_menu(update: Update, context: CallbackContext, token_strapi_api) -> N
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    products = get_products(token_strapi_api, url_starpi)
-    picture_url = get_picture_url(token_strapi_api, str(query.data), url_starpi)
-    image_bytes = get_image(token_strapi_api, picture_url, url_starpi)
+    products = get_products(strapi_api_token, url_starpi)
+    picture_url = get_picture_url(strapi_api_token, str(query.data), url_starpi)
+    image_bytes = get_image(strapi_api_token, picture_url, url_starpi)
     for product in products:
         if str(product["documentId"]) == str(query.data):
             text = f"{product["title"]} - {product["price"]} руб/кг\n\n{product["description"]}"
@@ -84,27 +84,27 @@ def handle_menu(update: Update, context: CallbackContext, token_strapi_api) -> N
     return "HANDLE_DESCRIPTION"
 
 
-def handle_description(update: Update, context: CallbackContext, token_strapi_api):
+def handle_description(update: Update, context: CallbackContext, strapi_api_token):
     query = update.callback_query
     query.answer()
     if query.data == "back":
-        start(update, context, token_strapi_api)
+        start(update, context, strapi_api_token)
         return "HANDLE_MENU"
     if query.data == "in_cart":
         product_id = context.user_data["product_id"]
 
         cart_item_id = add_to_cart_item(
-            token_strapi_api, str(query.message.chat_id), product_id, url_starpi
+            strapi_api_token, str(query.message.chat_id), product_id, url_starpi
         )
-        cart_id = get_cart_id(token_strapi_api, str(query.message.chat_id), url_starpi)
+        cart_id = get_cart_id(strapi_api_token, str(query.message.chat_id), url_starpi)
 
-        connect_cart_to_cart_item(token_strapi_api, cart_id, cart_item_id, url_starpi)
+        connect_cart_to_cart_item(strapi_api_token, cart_id, cart_item_id, url_starpi)
         context.user_data[product_id] = ""
         context.bot.send_message(
             chat_id=query.message.chat_id,
             text="Товар добавлен в корзину",
         )
-        start(update, context, token_strapi_api)
+        start(update, context, strapi_api_token)
         return "HANDLE_MENU"
 
     if query.data == "chek_cart":
@@ -112,23 +112,23 @@ def handle_description(update: Update, context: CallbackContext, token_strapi_ap
             chat_id=query.message.chat_id,
             message_id=query.message.message_id,
         )
-        check_cart(update, context, token_strapi_api)
+        check_cart(update, context, strapi_api_token)
         return "GET_CART_MENU"
 
 
-def get_cart_menu(update: Update, context: CallbackContext, token_strapi_api):
+def get_cart_menu(update: Update, context: CallbackContext, strapi_api_token):
     query = update.callback_query
     query.answer()
     tg_id = query.message.chat_id
     user_cart = get_products_cart(
-        token_strapi_api, str(query.message.chat_id), url_starpi
+        strapi_api_token, str(query.message.chat_id), url_starpi
     )
     if query.data == "clear_cart":
-        delete_product_items(token_strapi_api, tg_id, user_cart, url_starpi)
-        start(update, context, token_strapi_api)
+        delete_product_items(strapi_api_token, tg_id, user_cart, url_starpi)
+        start(update, context, strapi_api_token)
         return "HANDLE_MENU"
     if query.data == "in_menu":
-        start(update, context, token_strapi_api)
+        start(update, context, strapi_api_token)
         return "HANDLE_MENU"
     if query.data == "pay":
         context.bot.send_message(
@@ -138,7 +138,7 @@ def get_cart_menu(update: Update, context: CallbackContext, token_strapi_api):
         return "WAIT_EMAIL"
 
 
-def wait_email(update: Update, context: CallbackContext, token_strapi_api):
+def wait_email(update: Update, context: CallbackContext, strapi_api_token):
     chat_id = update.effective_user.id
     email = update.message.text
     try:
@@ -150,18 +150,18 @@ def wait_email(update: Update, context: CallbackContext, token_strapi_api):
         )
         return "WAIT_EMAIL"
     tg_id = str(update.effective_user.id)
-    client_id = create_client(token_strapi_api, tg_id, email, url_starpi)
-    cart_id = get_cart_id(token_strapi_api, chat_id, url_starpi)
-    connect_client_to_cart(token_strapi_api, client_id, cart_id, url_starpi)
+    client_id = create_client(strapi_api_token, tg_id, email, url_starpi)
+    cart_id = get_cart_id(strapi_api_token, chat_id, url_starpi)
+    connect_client_to_cart(strapi_api_token, client_id, cart_id, url_starpi)
     context.bot.send_message(
         chat_id=update.effective_user.id,
         text="Спасибо, менеджер скоро с вами свяжется ",
     )
-    start(update, context, token_strapi_api)
+    start(update, context, strapi_api_token)
     return "HANDLE_MENU"
 
 
-def check_cart(update: Update, context: CallbackContext, token_strapi_api):
+def check_cart(update: Update, context: CallbackContext, strapi_api_token):
     keyboard = [
         [
             InlineKeyboardButton("Отказаться от товара", callback_data="clear_cart"),
@@ -172,7 +172,7 @@ def check_cart(update: Update, context: CallbackContext, token_strapi_api):
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     user_cart = get_products_cart(
-        token_strapi_api, str(update.effective_user.id), url_starpi
+        strapi_api_token, str(update.effective_user.id), url_starpi
     )
     text = ""
     total_sum = 0
@@ -190,7 +190,7 @@ def check_cart(update: Update, context: CallbackContext, token_strapi_api):
     )
 
 
-def handle_users_reply(update, context, token_strapi_api, db, url_starpi):
+def handle_users_reply(update, context, strapi_api_token, db, url_starpi):
     if update.message:
         user_reply = update.message.text
         chat_id = update.message.chat_id
@@ -204,13 +204,13 @@ def handle_users_reply(update, context, token_strapi_api, db, url_starpi):
     else:
         user_state = db.get(chat_id).decode("utf-8")
     states_functions = {
-        "START": partial(start, token_strapi_api=token_strapi_api),
-        "HANDLE_MENU": partial(handle_menu, token_strapi_api=token_strapi_api),
+        "START": partial(start, strapi_api_token=strapi_api_token),
+        "HANDLE_MENU": partial(handle_menu, strapi_api_token=strapi_api_token),
         "HANDLE_DESCRIPTION": partial(
-            handle_description, token_strapi_api=token_strapi_api
+            handle_description, strapi_api_token=strapi_api_token
         ),
-        "GET_CART_MENU": partial(get_cart_menu, token_strapi_api=token_strapi_api),
-        "WAIT_EMAIL": partial(wait_email, token_strapi_api=token_strapi_api),
+        "GET_CART_MENU": partial(get_cart_menu, strapi_api_token=strapi_api_token),
+        "WAIT_EMAIL": partial(wait_email, strapi_api_token=strapi_api_token),
     }
     state_handler = states_functions[user_state]
     try:
@@ -226,7 +226,7 @@ if __name__ == "__main__":
     env = Env()
     env.read_env()
     tg_bot_token = env.str("TG_BOT_TOKEN")
-    token_strapi_api = env.str("TOKEN_STRAPI_API")
+    strapi_api_token = env.str("STRAPI_API_TOKEN")
 
     url_starpi = env.str("URL_STARPI")
     database_password = env.str("REDIS_PASSWORD")
@@ -245,7 +245,7 @@ if __name__ == "__main__":
             "start",
             partial(
                 handle_users_reply,
-                token_strapi_api=token_strapi_api,
+                strapi_api_token=strapi_api_token,
                 db=database,
                 url_starpi=url_starpi,
             ),
@@ -255,7 +255,7 @@ if __name__ == "__main__":
         CallbackQueryHandler(
             partial(
                 handle_users_reply,
-                token_strapi_api=token_strapi_api,
+                strapi_api_token=strapi_api_token,
                 db=database,
                 url_starpi=url_starpi,
             ),
@@ -266,7 +266,7 @@ if __name__ == "__main__":
             Filters.text,
             partial(
                 handle_users_reply,
-                token_strapi_api=token_strapi_api,
+                strapi_api_token=strapi_api_token,
                 db=database,
                 url_starpi=url_starpi,
             ),

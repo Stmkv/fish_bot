@@ -176,4 +176,4 @@ def connect_client_to_cart(token_strapi_api, client_id, cart_id, base_url):
 if __name__ == "__main__":
     env = Env()
     env.read_env()
-    token_strapi_api = env.str("TOKEN_STRAPI_API")
+    strapi_api_token = env.str("STRAPI_API_TOKEN")

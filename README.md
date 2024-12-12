@@ -7,7 +7,7 @@
 Необходимо создать `.env`
 
 ```.env
-TOKEN_STRAPI_API=<Token Strapi>
+STRAPI_API_TOKEN=<Token Strapi>
 TG_BOT_TOKEN=<Token бота телеграм>
 REDIS_ADDRESS=<Адрес Redis>
 REDIS_PORT=<Порт Redis>
