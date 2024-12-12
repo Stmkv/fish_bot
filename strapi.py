@@ -57,9 +57,10 @@ def create_cart(token_strapi_api, tg_id, base_url):
 
 
 def get_cart_id(token_strapi_api, tg_id, base_url):
-    url = f"{base_url}/api/carts?filters[tg_id][$eq]={tg_id}"
+    url = f"{base_url}/api/carts"
+    params = {"filters[tg_id][$eq]": tg_id}
     headers = {"Authorization": f"bearer {token_strapi_api}"}
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, params=params)
     response.raise_for_status()
 
     data = response.json()
@@ -173,7 +174,6 @@ def connect_client_to_cart(token_strapi_api, client_id, cart_id, base_url):
 
 
 if __name__ == "__main__":
-    base_url = "http://localhost:1337"
     env = Env()
     env.read_env()
     token_strapi_api = env.str("TOKEN_STRAPI_API")

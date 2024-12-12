@@ -12,6 +12,7 @@ TG_BOT_TOKEN=<Token бота телеграм>
 REDIS_ADDRESS=<Адрес Redis>
 REDIS_PORT=<Порт Redis>
 REDIS_PASSWORD=<пароль Redis>
+URL_STARPI=<http://localhost:1337>
 
 ```
 
